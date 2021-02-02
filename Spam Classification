@@ -1,10 +1,7 @@
 import collections
-
 import numpy as np
-
 import util
 import svm
-
 
 def get_words(message):
     """Get the normalized list of words from a message string.
@@ -18,6 +15,7 @@ def get_words(message):
     complex.  For our purposes, please split using the space character ONLY.  This
     is intended to balance your understanding with our ability to autograde the
     assignment.  Thanks and have fun with the rest of the assignment!
+    
     Args:
         message: A string containing an SMS message
     Returns:
@@ -25,7 +23,9 @@ def get_words(message):
     """
 
     # *** START CODE HERE ***
+    
     return [word.lower() for word in message.split(' ')]
+
     # *** END CODE HERE ***
 
 
@@ -35,6 +35,7 @@ def create_dictionary(messages):
     training messages. Use get_words to process each message.
     Rare words are often not useful for modeling. Please only add words to the dictionary
     if they occur in at least five messages.
+    
     Args:
         messages: A list of strings containing SMS messages
     Returns:
@@ -42,6 +43,7 @@ def create_dictionary(messages):
     """
 
     # *** START CODE HERE ***
+    
     word_counts = collections.defaultdict(int)
     
     for message in messages:
@@ -68,6 +70,7 @@ def transform_text(messages, word_dictionary):
     and each column should correspond to a word of the vocabulary.
     Use the provided word dictionary to map words to column indices. Ignore words that
     are not present in the dictionary. Use get_words to get the words for a message.
+    
     Args:
         messages: A list of strings where each string is an SMS message.
         word_dictionary: A python dict mapping words to integers.
@@ -77,6 +80,7 @@ def transform_text(messages, word_dictionary):
         j-th vocabulary word in the i-th message.
     """
     # *** START CODE HERE ***
+    
     result = np.zeros((len(messages), len(word_dictionary)))
     
     for i, message in enumerate(messages):
@@ -94,6 +98,7 @@ def fit_naive_bayes_model(matrix, labels):
     This function should fit a Naive Bayes model given a training matrix and labels.
     The function should return the state of that model.
     Feel free to use whatever datatype you wish for the state of the model.
+    
     Args:
         matrix: A numpy array containing word counts for the training data
         labels: The binary (0 or 1) labels for that training data
@@ -123,6 +128,7 @@ def predict_from_naive_bayes_model(model, matrix):
     """Use a Naive Bayes model to compute predictions for a target matrix.
     This function should be able to predict on the models that fit_naive_bayes_model
     outputs.
+    
     Args:
         model: A trained model from fit_naive_bayes_model
         matrix: A numpy array containing word counts
@@ -142,7 +148,6 @@ def predict_from_naive_bayes_model(model, matrix):
     output = (logprobs_1 > logprobs_0).astype(int)
     return output
 
-
     # *** END CODE HERE ***
 
 
@@ -150,6 +155,7 @@ def get_top_five_naive_bayes_words(model, dictionary):
     """Compute the top five words that are most indicative of the spam (i.e positive) class.
     Ues the metric given in part-c as a measure of how indicative a word is.
     Return the words in sorted form, with the most indicative word first.
+    
     Args:
         model: The Naive Bayes model returned from fit_naive_bayes_model
         dictionary: A mapping of word to integer ids
@@ -158,7 +164,9 @@ def get_top_five_naive_bayes_words(model, dictionary):
     # *** START CODE HERE ***
     
     ids = np.argsort(model['logtheta_0'] - model['logtheta_1'])[:5]
+    
     reverse_dictionary = {i: word for word, i in dictionary.items()}
+    
     return [reverse_dictionary[i] for i in ids]
     
     # *** END CODE HERE ***
@@ -168,6 +176,7 @@ def compute_best_svm_radius(train_matrix, train_labels, val_matrix, val_labels, 
     """Compute the optimal SVM radius using the provided training and evaluation datasets.
     You should only consider radius values within the radius_to_consider list.
     You should use accuracy as a metric for comparing the different radius values.
+    
     Args:
         train_matrix: The word counts for the training data
         train_labels: The spma or not spam labels for the training data
