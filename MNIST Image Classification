@@ -63,6 +63,7 @@ def get_initial_params(input_size, num_hidden, num_output):
     Compute the initial parameters for the neural network.
     This function should return a dictionary mapping parameter names to numpy arrays containing
     the initial values for those parameters.
+    
     There should be four parameters for this model:
     W1 is the weight matrix for the hidden layer of size input_size x num_hidden
     b1 is the bias vector for the hidden layer of size num_hidden
@@ -82,6 +83,23 @@ def get_initial_params(input_size, num_hidden, num_output):
     """
 
     # *** START CODE HERE ***
+    
+    
+    """
+    x = x/sigmoid to center
+    initialize as close as possible to 1. 
+    
+    
+    ###initialization scheme
+    a = sigmoid(z)
+    z = w1x1.......wnxn
+    Large n -> very small wi. 
+    
+    Wi ~ 1/n
+    More numbers - smaller w.
+    
+    
+    """
     
     W1 = np.random.randn(n_h,n_x)*0.01
     b1 = np.zeros((n_h,1))
@@ -138,11 +156,12 @@ def forward_prop(data, labels, params):
     ### END CODE HERE ###
     
     # Implement Forward Propagation to calculate A2 (probabilities)
-    ### START CODE HERE ### (≈ 4 lines of code)
+    
     Z1 = np.dot(W1, X) + b1
-    A1 =  np.tanh(Z1)
+    A1 = np.tanh(Z1)
     Z2 = np.dot(W2, A1) + b2
     A2 = sigmoid(Z2)
+    
     ### END CODE HERE ###
     
     assert(A2.shape == (1, X.shape[1]))
@@ -153,8 +172,7 @@ def forward_prop(data, labels, params):
              "A2": A2}
     
     return A2, cache
-    
-    
+        
     # *** END CODE HERE ***
 
 def backward_prop(data, labels, params, forward_prop_func):
@@ -178,14 +196,8 @@ def backward_prop(data, labels, params, forward_prop_func):
     """
     # *** START CODE HERE ***
     
-    
-    
-    # GRADED FUNCTION: backward_propagation
-
 def backward_propagation(parameters, cache, X, Y):
-    """
-    Implement the backward propagation using the instructions above.
-    
+    """   
     Arguments:
     parameters -- python dictionary containing our parameters 
     cache -- a dictionary containing "Z1", "A1", "Z2" and "A2".
@@ -194,23 +206,41 @@ def backward_propagation(parameters, cache, X, Y):
     
     Returns:
     grads -- python dictionary containing your gradients with respect to different parameters
+    
     """
     m = X.shape[1]
     
-    # First, retrieve W1 and W2 from the dictionary "parameters".
-    ### START CODE HERE ### (≈ 2 lines of code)
     W1 = parameters["W1"]
     W2 = parameters["W2"]
    
-    ### END CODE HERE ###
-        
-    # Retrieve also A1 and A2 from dictionary "cache".
-    ### START CODE HERE ### (≈ 2 lines of code)
     A1 = cache["A1"]
-    A2 =  cache["A2"]
+    A2 = cache["A2"]
+    
     ### END CODE HERE ###
     
-    # Backward propagation: calculate dW1, db1, dW2, db2. 
+def backward_prop_regularized(data, labels, params, forward_prop_func, reg):
+    """
+    Implement the backward propegation gradient computation step for a neural network
+    
+    Args:
+        data: A numpy array containing the input
+        labels: A 2d numpy array containing the labels
+        params: A dictionary mapping parameter names to numpy arrays with the parameters.
+            This numpy array will contain W1, b1, W2 and b2
+            W1 and b1 represent the weights and bias for the hidden layer of the network
+            W2 and b2 represent the weights and bias for the output layer of the network
+        forward_prop_func: A function that follows the forward_prop API above
+        reg: The regularization strength (lambda)
+    Returns:
+        A dictionary of strings to numpy arrays where each key represents the name of a weight
+        and the values represent the gradient of the loss with respect to that weight.
+        
+        In particular, it should have 4 elements:
+            W1, W2, b1, and b2
+    """
+    # *** START CODE HERE ***
+    
+      # Backward propagation: calculate dW1, db1, dW2, db2. 
     ### START CODE HERE ### (≈ 6 lines of code, corresponding to 6 equations on slide above)
     dZ2= A2-Y
     dW2 = 1./m*np.dot(dZ2, A1.T)
@@ -238,31 +268,6 @@ print ("db2 = "+ str(grads["db2"]))
     
     
     # *** END CODE HERE ***
-
-
-def backward_prop_regularized(data, labels, params, forward_prop_func, reg):
-    """
-    Implement the backward propegation gradient computation step for a neural network
-    
-    Args:
-        data: A numpy array containing the input
-        labels: A 2d numpy array containing the labels
-        params: A dictionary mapping parameter names to numpy arrays with the parameters.
-            This numpy array will contain W1, b1, W2 and b2
-            W1 and b1 represent the weights and bias for the hidden layer of the network
-            W2 and b2 represent the weights and bias for the output layer of the network
-        forward_prop_func: A function that follows the forward_prop API above
-        reg: The regularization strength (lambda)
-    Returns:
-        A dictionary of strings to numpy arrays where each key represents the name of a weight
-        and the values represent the gradient of the loss with respect to that weight.
-        
-        In particular, it should have 4 elements:
-            W1, W2, b1, and b2
-    """
-    # *** START CODE HERE ***
-    
-    
     
     # *** END CODE HERE ***
 
