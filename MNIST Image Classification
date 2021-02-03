@@ -290,6 +290,26 @@ def gradient_descent_epoch(train_data, train_labels, learning_rate, batch_size, 
     # *** START CODE HERE ***
     
     
+    ###
+    For iteration t=1.....
+    Select batch (x{t}, y{t})
+    Forward Prop
+    Backprop Batch
+    Update W(l), B(l)
+    
+    J = 1/1000 L(i)
+    
+    Gradient Descent with Momentum algorithm. 
+    Faster resoution towards center.
+    
+    Gradient Descent: 
+    W = W-alpha(dl/dw)
+    
+    Momentum:
+    v = Bv + (1-B)dL/dw
+    w = w - (alpha*v)
+    
+    """
     
     
     # *** END CODE HERE ***
