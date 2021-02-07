@@ -5,47 +5,33 @@ import argparse
 def softmax(x):
     """
     Compute softmax function for a batch of input values. 
+    
     The first dimension of the input corresponds to the batch size. The second dimension
     corresponds to every class in the output. When implementing softmax, you should be careful
     to only sum over the second dimension.
+    
     Important Note: You must be careful to avoid overflow for this function. Functions
     like softmax have a tendency to overflow when very large numbers like e^10000 are computed.
     You will know that your function is overflow resistent when it can handle input like:
     np.array([[10000, 10010, 10]]) without issues.
+    
     Args:
         x: A 2d numpy float array of shape batch_size x number_of_classes
     Returns:
         A 2d numpy float array containing the softmax results of shape batch_size x number_of_classes
-    """
-    # *** START CODE HERE ***
+    """    
     
-    e_x = np.exp(x - np.max(x))
-    return e_x / e_x.sum()
-
-    scores = [3.0, 1.0, 0.2]
-    print(softmax(scores))
     
-    """
-    f = np.array([123, 456, 789]) # example with 3 classes and each having large scores
-    p = np.exp(f) / np.sum(np.exp(f)) # Bad: Numeric problem, potential blowup
-
-    # instead: first shift the values of f so that the highest number is 0:
-    f -= np.max(f) # f becomes [-666, -333, 0]
-    p = np.exp(f) / np.sum(np.exp(f)) # safe to do, gives the correct answer
+    return np.exp(x) / np.exp(x).sum(axis=1, keepdims=True)
     
-    % Train softmax classifier using minFunc
-    options = struct('MaxIter', 200);
+    # Option to shift values so that the highest number is 0 e.g.:
+    #f -= np.max(scores)
+    #p = np.exp(f) / np.sum(np.exp(f))
+    #print(softmax(p))
+    #options = struct('MaxIter', 200);
+    #theta = rand(n,num_classes-1)*0.001;
+    #return np.exp(x) / np.sum(np.exp(x), axis=0)
     
-    % Initialize theta.  We use a matrix where each column corresponds to a class,
-    % and each row is a classifier coefficient for that class.
-    % Inside minFunc, theta will be stretched out into a long vector (theta(:)).
-    % We only use num_classes-1 columns, since the last column is always assumed 0.
-    theta = rand(n,num_classes-1)*0.001;
-    
-    """
-
-    
-    # *** END CODE HERE ***
 
 def sigmoid(x):
     """
@@ -54,21 +40,18 @@ def sigmoid(x):
         x: A numpy float array
     Returns:
         A numpy float array containing the sigmoid results
-    """
-    # *** START CODE HERE ***
-    
-    "Numerically-stable sigmoid function."
-
+    """    
+   
+    #Numerically-stable sigmoid function."
        
     return np.where(x >= 0, 
          1 / (1 + np.exp(-x)), 
             np.exp(x) / (1 + np.exp(x)))
 
     
-    # *** END CODE HERE ***
-
 def get_initial_params(input_size, num_hidden, num_output):
-    """
+    
+    """"
     Compute the initial parameters for the neural network.
     This function should return a dictionary mapping parameter names to numpy arrays containing
     the initial values for those parameters.
@@ -91,53 +74,49 @@ def get_initial_params(input_size, num_hidden, num_output):
         A dict mapping parameter names to numpy arrays
     """
 
-    # *** START CODE HERE ***
-    
-    
-    """
-    x = x/sigmoid to center
-    initialize as close as possible to 1. 
-    
-    
-    ###initialization scheme
-    a = sigmoid(z)
-    z = w1x1.......wnxn
-    Large n -> very small wi. 
-    
-    Wi ~ 1/n
-    More numbers - smaller w.
-    
-    
-    """
-    
-    W1 = np.random.randn(n_h,n_x)*0.01
-    b1 = np.zeros((n_h,1))
-    W2 = np.random.randn(n_y,n_h)*0.01
-    b2 = np.zeros((n_y,1))
-    
-   ### END CODE HERE ###
-    
-    assert(W1.shape == (n_h, n_x))
-    assert(b1.shape == (n_h, 1))
-    assert(W2.shape == (n_y, n_h))
-    assert(b2.shape == (n_y, 1))
-    
-    parameters = {"W1": W1,
-                  "b1": b1,
-                  "W2": W2,
-                  "b2": b2}
-    
-    return parameters    
+    W1 = 0.1 * np.random.randn(input_size, num_hidden[0])
+    W2 = 0.1 * np.random.randn(num_hidden[0], num_hidden[1])
+    b1 = np.zeros((num_hidden[0]))
+    b2 = np.zeros((num_hidden[1]))
+
+    # Initial velocity for momentum
+    V_w1 = np.zeros(W1.shape)
+    V_w2 = np.zeros(W2.shape)
+    V_b1 = np.zeros(b1.shape)
+    V_b2 = np.zeros(b2.shape)
+
+    parameters = {
+        'W1': W1,
+        'W2': W2,
+        'b1': b1,
+        'b2': b2,
+        'V_w1': V_w1,
+        'V_w2': V_w2,
+        'V_b1': V_b1,
+        'V_b2': V_b2
+    }
+        
+    return parameters  
 
 
-    parameters = initialize_parameters(2,2,1)
-    print("W1 = " + str(parameters["W1"]))
-    print("b1 = " + str(parameters["b1"]))
-    print("W2 = " + str(parameters["W2"]))
-    print("b2 = " + str(parameters["b2"]))
-
+    ###########################
     
-    # *** END CODE HERE ***
+    # update velocity
+    model['V_w1'] = momentum * model['V_w1'] - eps * model['dE_dW1']
+    model['V_w2'] = momentum * model['V_w2'] - eps * model['dE_dW2']
+    model['V_b1'] = momentum * model['V_b1'] - eps * model['dE_db1']
+    model['V_b2'] = momentum * model['V_b2'] - eps * model['dE_db2']
+
+    # Update the weights.
+    model['W1'] = model['W1'] + model['V_w1']
+    model['W2'] = model['W2'] + model['V_w2']
+    model['b1'] = model['b1'] + model['V_b1']
+    model['b2'] = model['b2'] + model['V_b2']
+   
+    pass
+
+    ###########################
+
 
 def forward_prop(data, labels, params):
     """
@@ -150,28 +129,23 @@ def forward_prop(data, labels, params):
             This numpy array will contain W1, b1, W2 and b2
             W1 and b1 represent the weights and bias for the hidden layer of the network
             W2 and b2 represent the weights and bias for the output layer of the network
+    
     Returns:
         A 3 element tuple containing:
             1. A numpy array of the activations (after the sigmoid) of the hidden layer
             2. A numpy array The output (after the softmax) of the output layer
             3. The average loss for these data elements
     """
-    # *** START CODE HERE ***
     
     W1 = parameters["W1"]
     b1 = parameters["b1"]
     W2 = parameters["W2"]
-    b2 = parameters["b2"]
-    ### END CODE HERE ###
-    
-    # Implement Forward Propagation to calculate A2 (probabilities)
+    b2 = parameters["b2"]    
     
     Z1 = np.dot(W1, X) + b1
     A1 = np.tanh(Z1)
     Z2 = np.dot(W2, A1) + b2
     A2 = sigmoid(Z2)
-    
-    ### END CODE HERE ###
     
     assert(A2.shape == (1, X.shape[1]))
     
@@ -181,8 +155,6 @@ def forward_prop(data, labels, params):
              "A2": A2}
     
     return A2, cache
-        
-    # *** END CODE HERE ***
 
 def backward_prop(data, labels, params, forward_prop_func):
     """
@@ -196,6 +168,7 @@ def backward_prop(data, labels, params, forward_prop_func):
             W1 and b1 represent the weights and bias for the hidden layer of the network
             W2 and b2 represent the weights and bias for the output layer of the network
         forward_prop_func: A function that follows the forward_prop API above
+    
     Returns:
         A dictionary of strings to numpy arrays where each key represents the name of a weight
         and the values represent the gradient of the loss with respect to that weight.
@@ -203,21 +176,8 @@ def backward_prop(data, labels, params, forward_prop_func):
         In particular, it should have 4 elements:
             W1, W2, b1, and b2
     """
-    # *** START CODE HERE ***
     
-def backward_propagation(parameters, cache, X, Y):
-    """   
-    Arguments:
-    parameters -- python dictionary containing our parameters 
-    cache -- a dictionary containing "Z1", "A1", "Z2" and "A2".
-    X -- input data of shape (2, number of examples)
-    Y -- "true" labels vector of shape (1, number of examples)
-    
-    Returns:
-    grads -- python dictionary containing your gradients with respect to different parameters
-    
-    """
-    m = X.shape[1]
+    m = A2.shape[1]
     
     W1 = parameters["W1"]
     W2 = parameters["W2"]
@@ -225,7 +185,6 @@ def backward_propagation(parameters, cache, X, Y):
     A1 = cache["A1"]
     A2 = cache["A2"]
     
-    ### END CODE HERE ###
     
 def backward_prop_regularized(data, labels, params, forward_prop_func, reg):
     """
@@ -247,17 +206,13 @@ def backward_prop_regularized(data, labels, params, forward_prop_func, reg):
         In particular, it should have 4 elements:
             W1, W2, b1, and b2
     """
-    # *** START CODE HERE ***
-    
-      # Backward propagation: calculate dW1, db1, dW2, db2. 
-    ### START CODE HERE ### (≈ 6 lines of code, corresponding to 6 equations on slide above)
+
     dZ2= A2-Y
     dW2 = 1./m*np.dot(dZ2, A1.T)
     db2 = 1./m*np.sum(dZ2, axis = 1, keepdims=True)
     dZ1 = np.dot(W2.T, dZ2) * (1 - np.power(A1, 2))
     dW1 = 1./m* np.dot(dZ1, X.T)
     db1 = 1./m*np.sum(dZ1, axis = 1, keepdims=True)
-    ### END CODE HERE ###
     
     grads = {"dW1": dW1,
              "db1": db1,
@@ -266,23 +221,27 @@ def backward_prop_regularized(data, labels, params, forward_prop_func, reg):
     
     return grads
 
+    parameters, cache, X_assess, Y_assess = backward_propagation_test_case()
 
-parameters, cache, X_assess, Y_assess = backward_propagation_test_case()
-
-grads = backward_propagation(parameters, cache, X_assess, Y_assess)
-print ("dW1 = "+ str(grads["dW1"]))
-print ("db1 = "+ str(grads["db1"]))
-print ("dW2 = "+ str(grads["dW2"]))
-print ("db2 = "+ str(grads["db2"]))
+    grads = backward_propagation(parameters, cache, X_assess, Y_assess)
+    print ("dW1 = "+ str(grads["dW1"]))
+    print ("db1 = "+ str(grads["db1"]))
+    print ("dW2 = "+ str(grads["dW2"]))
+    print ("db2 = "+ str(grads["db2"]))
     
-    # *** END CODE HERE ***
 
+    #Regularization:
+    #dW2 += reg * W2
+    #dW1 += reg * W1
+    
 def gradient_descent_epoch(train_data, train_labels, learning_rate, batch_size, params, forward_prop_func, backward_prop_func):
     """
     Perform one epoch of gradient descent on the given training data using the provided learning rate.
     This code should update the parameters stored in params.
     It should not return anything
-    Args:
+   
+   
+   Args:
         train_data: A numpy array containing the training data
         train_labels: A numpy array containing the training labels
         learning_rate: The learning rate
@@ -290,36 +249,13 @@ def gradient_descent_epoch(train_data, train_labels, learning_rate, batch_size, 
         params: A dict of parameter names to parameter values that should be updated.
         forward_prop_func: A function that follows the forward_prop API
         backward_prop_func: A function that follows the backwards_prop API
+    
     Returns: This function returns nothing.
     """
-
-    # *** START CODE HERE ***
+    #reduce any underflow issues: 
+    #np.exp(x, dtype=np.float128)
     
     
-    ###
-    For iteration t=1.....
-    Select batch (x{t}, y{t})
-    Forward Prop
-    Backprop Batch
-    Update W(l), B(l)
-    
-    J = 1/1000 L(i)
-    
-    Gradient Descent with Momentum algorithm. 
-    Faster resoution towards center.
-    
-    Gradient Descent: 
-    W = W-alpha(dl/dw)
-    
-    Momentum:
-    v = Bv + (1-B)dL/dw
-    w = w - (alpha*v)
-    
-    """
-    
-    
-    # *** END CODE HERE ***
-
     # This function does not return anything
     return
 
@@ -459,27 +395,3 @@ if __name__ == '__main__':
     main(num_epochs = args.num_epochs)
     
    
-    """
-    
-    ###
-    For iteration t=1.....
-    Select batch (x{t}, y{t})
-    Forward Prop
-    Backprop Batch
-    Update W(l), B(l)
-    
-    J = 1/1000 L(i)
-    
-    Gradient Descent with Momentum algorithm. 
-    Faster resoution towards center.
-    
-    Gradient Descent: 
-    W = W-alpha(dl/dw)
-    
-    Momentum:
-    v = Bv + (1-B)dL/dw
-    w = w - (alpha*v)
-    
-    # This function does not return anything
-    
-    """
