@@ -21,13 +21,8 @@ def get_words(message):
     Returns:
        The list of normalized words from the message.
     """
-
-    # *** START CODE HERE ***
     
     return [word.lower() for word in message.split(' ')]
-
-    # *** END CODE HERE ***
-
 
 def create_dictionary(messages):
     """Create a dictionary mapping words to integer indices.
@@ -41,8 +36,6 @@ def create_dictionary(messages):
     Returns:
         A python dict mapping words to integers.
     """
-
-    # *** START CODE HERE ***
     
     word_counts = collections.defaultdict(int)
     
@@ -50,16 +43,14 @@ def create_dictionary(messages):
         for word in set(get_words(message)):
             word_counts[word] += 1
             
-    resulting_dictionary = {}
+    results_dictionary = {}
     
-    for word, count in work_counts.items():
+    for word, count in word_counts.items():
         if count >= 5:
-            next_index = len(resulting_dictionary)
-            resulting_dictionary[word] = next_index
+            next_index = len(results_dictionary)
+            results_dictionary[word] = next_index
             
-    return resulting_dictionary
-
-    # *** END CODE HERE ***
+    return results_dictionary
 
 
 def transform_text(messages, word_dictionary):
@@ -79,7 +70,6 @@ def transform_text(messages, word_dictionary):
         Where the component (i,j) is the number of occurrences of the
         j-th vocabulary word in the i-th message.
     """
-    # *** START CODE HERE ***
     
     result = np.zeros((len(messages), len(word_dictionary)))
     
@@ -89,9 +79,6 @@ def transform_text(messages, word_dictionary):
                 result [i, word_dictionary[word]] += 1
                 
     return result
-        
-    # *** END CODE HERE ***
-
 
 def fit_naive_bayes_model(matrix, labels):
     """Fit a naive bayes model.
@@ -104,8 +91,6 @@ def fit_naive_bayes_model(matrix, labels):
         labels: The binary (0 or 1) labels for that training data
     Returns: The trained model
     """
-
-    # *** START CODE HERE ***
     
     model = {}
 
@@ -120,8 +105,6 @@ def fit_naive_bayes_model(matrix, labels):
     model['logtheta_1'] = np.log(theta_1)
 
     return model
-    
-    # *** END CODE HERE ***
 
 
 def predict_from_naive_bayes_model(model, matrix):
@@ -134,7 +117,6 @@ def predict_from_naive_bayes_model(model, matrix):
         matrix: A numpy array containing word counts
     Returns: A numpy array containg the predictions from the model
     """
-    # *** START CODE HERE ***
     
     output = np.zeros(matrix.shape[0])
 
@@ -148,9 +130,6 @@ def predict_from_naive_bayes_model(model, matrix):
     output = (logprobs_1 > logprobs_0).astype(int)
     return output
 
-    # *** END CODE HERE ***
-
-
 def get_top_five_naive_bayes_words(model, dictionary):
     """Compute the top five words that are most indicative of the spam (i.e positive) class.
     Ues the metric given in part-c as a measure of how indicative a word is.
@@ -161,15 +140,12 @@ def get_top_five_naive_bayes_words(model, dictionary):
         dictionary: A mapping of word to integer ids
     Returns: A list of the top five most indicative words in sorted order with the most indicative first
     """
-    # *** START CODE HERE ***
     
     ids = np.argsort(model['logtheta_0'] - model['logtheta_1'])[:5]
     
     reverse_dictionary = {i: word for word, i in dictionary.items()}
     
     return [reverse_dictionary[i] for i in ids]
-    
-    # *** END CODE HERE ***
 
 
 def compute_best_svm_radius(train_matrix, train_labels, val_matrix, val_labels, radius_to_consider):
@@ -186,7 +162,6 @@ def compute_best_svm_radius(train_matrix, train_labels, val_matrix, val_labels, 
     Returns:
         The best radius which maximizes SVM accuracy.
     """
-    # *** START CODE HERE ***
     
     best = None
 
@@ -200,8 +175,6 @@ def compute_best_svm_radius(train_matrix, train_labels, val_matrix, val_labels, 
             best = max(best, (svm_accuracy, radius))
 
     return best[1]
-
-        # *** END CODE HERE ***
 
 
 def main():
