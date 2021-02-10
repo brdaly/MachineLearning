@@ -1,0 +1,178 @@
+The following is the response
+
+
+Explanation:
+# Let's first import all the packages that you will need during this assignment. 
+# - [numpy](www.numpy.org) is the fundamental package for scientific computing with Python.
+# - [matplotlib](http://matplotlib.org) is a library to plot graphs in Python.
+# - [h5py](http://www.h5py.org) is a common package to interact with a dataset that is stored on an H5 file.
+# - [PIL](http://www.pythonware.com/products/pil/) and [scipy](https://www.scipy.org/) are used here to test your model with your own picture at the end.
+# - dnn_app_utils provides the functions implemented in the "Building your Deep Neural Network: Step by Step" assignment to this notebook.
+# - np.random.seed(1) is used to keep all the random function calls consistent. It will help us grade your work.
+
+# In[1]:
+
+import time
+import numpy as np
+import h5py
+import matplotlib.pyplot as plt
+import scipy
+from PIL import Image
+from scipy import ndimage
+from dnn_app_utils_v2 import *
+
+get_ipython().magic('matplotlib inline')
+plt.rcParams['figure.figsize'] = (5.0, 4.0) # set default size of plots
+plt.rcParams['image.interpolation'] = 'nearest'
+plt.rcParams['image.cmap'] = 'gray'
+
+get_ipython().magic('load_ext autoreload')
+get_ipython().magic('autoreload 2')
+
+np.random.seed(1)
+
+
+# ## 2 - Dataset
+# 
+# You will use the same "Cat vs non-Cat" dataset as in "Logistic Regression as a Neural Network" (Assignment 2). The model you had built had 70% test accuracy on classifying cats vs non-cats images. Hopefully, your new model will perform a better!
+# 
+# **Problem Statement**: You are given a dataset ("data.h5") containing:
+#     - a training set of m_train images labelled as cat (1) or non-cat (0)
+#     - a test set of m_test images labelled as cat and non-cat
+#     - each image is of shape (num_px, num_px, 3) where 3 is for the 3 channels (RGB).
+# 
+# Let's get more familiar with the dataset. Load the data by running the cell below.
+
+# In[2]:
+
+train_x_orig, train_y, test_x_orig, test_y, classes = load_data()
+
+
+# The following code will show you an image in the dataset. Feel free to change the index and re-run the cell multiple times to see other images.
+
+# In[6]:
+
+# Example of a picture
+index = 15
+plt.imshow(train_x_orig[index])
+print(train_x_orig.shape)
+print ("y = " + str(train_y[0,index]) + ". It's a " + classes[train_y[0,index]].decode("utf-8") +  " picture.")
+
+
+# In[7]:
+
+# Explore your dataset 
+m_train = train_x_orig.shape[0]
+num_px = train_x_orig.shape[1]
+m_test = test_x_orig.shape[0]
+
+print ("Number of training examples: " + str(m_train))
+print ("Number of testing examples: " + str(m_test))
+print ("Each image is of size: (" + str(num_px) + ", " + str(num_px) + ", 3)")
+print ("train_x_orig shape: " + str(train_x_orig.shape))
+print ("train_y shape: " + str(train_y.shape))
+print ("test_x_orig shape: " + str(test_x_orig.shape))
+print ("test_y shape: " + str(test_y.shape))
+
+
+# As usual, you reshape and standardize the images before feeding them to the network. The code is given in the cell below.
+# 
+# <img src="images/imvectorkiank.png" style="width:450px;height:300px;">
+# 
+# <caption><center> <u>Figure 1</u>: Image to vector conversion. <br> </center></caption>
+
+# In[8]:
+
+# Reshape the training and test examples 
+train_x_flatten = train_x_orig.reshape(train_x_orig.shape[0], -1).T   # The "-1" makes reshape flatten the remaining dimensions
+test_x_flatten = test_x_orig.reshape(test_x_orig.shape[0], -1).T
+
+# Standardize data to have feature values between 0 and 1.
+train_x = train_x_flatten/255.
+test_x = test_x_flatten/255.
+
+print ("train_x's shape: " + str(train_x.shape))
+print ("test_x's shape: " + str(test_x.shape))
+
+
+# $12,288$ equals $64 \times 64 \times 3$ which is the size of one reshaped image vector.
+
+# ## 3 - Architecture of your model
+
+# Now that you are familiar with the dataset, it is time to build a deep neural network to distinguish cat images from non-cat images.
+# 
+# You will build two different models:
+# - A 2-layer neural network
+# - An L-layer deep neural network
+# 
+# You will then compare the performance of these models, and also try out different values for $L$. 
+# 
+# Let's look at the two architectures.
+# 
+# ### 3.1 - 2-layer neural network
+# 
+# <img src="images/2layerNN_kiank.png" style="width:650px;height:400px;">
+# <caption><center> <u>Figure 2</u>: 2-layer neural network. <br> The model can be summarized as: ***INPUT -> LINEAR -> RELU -> LINEAR -> SIGMOID -> OUTPUT***. </center></caption>
+# 
+# <u>Detailed Architecture of figure 2</u>:
+# - The input is a (64,64,3) image which is flattened to a vector of size $(12288,1)$. 
+# - The corresponding vector: $[x_0,x_1,...,x_{12287}]^T$ is then multiplied by the weight matrix $W^{[1]}$ of size $(n^{[1]}, 12288)$.
+# - You then add a bias term and take its relu to get the following vector: $[a_0^{[1]}, a_1^{[1]},..., a_{n^{[1]}-1}^{[1]}]^T$.
+# - You then repeat the same process.
+# - You multiply the resulting vector by $W^{[2]}$ and add your intercept (bias). 
+# - Finally, you take the sigmoid of the result. If it is greater than 0.5, you classify it to be a cat.
+# 
+# ### 3.2 - L-layer deep neural network
+# 
+# It is hard to represent an L-layer deep neural network with the above representation. However, here is a simplified network representation:
+# 
+# <img src="images/LlayerNN_kiank.png" style="width:650px;height:400px;">
+# <caption><center> <u>Figure 3</u>: L-layer neural network. <br> The model can be summarized as: ***[LINEAR -> RELU] $\times$ (L-1) -> LINEAR -> SIGMOID***</center></caption>
+# 
+# <u>Detailed Architecture of figure 3</u>:
+# - The input is a (64,64,3) image which is flattened to a vector of size (12288,1).
+# - The corresponding vector: $[x_0,x_1,...,x_{12287}]^T$ is then multiplied by the weight matrix $W^{[1]}$ and then you add the intercept $b^{[1]}$. The result is called the linear unit.
+# - Next, you take the relu of the linear unit. This process could be repeated several times for each $(W^{[l]}, b^{[l]})$ depending on the model architecture.
+# - Finally, you take the sigmoid of the final linear unit. If it is greater than 0.5, you classify it to be a cat.
+# 
+# ### 3.3 - General methodology
+# 
+# As usual you will follow the Deep Learning methodology to build the model:
+#     1. Initialize parameters / Define hyperparameters
+#     2. Loop for num_iterations:
+#         a. Forward propagation
+#         b. Compute cost function
+#         c. Backward propagation
+#         d. Update parameters (using parameters, and grads from backprop) 
+#     4. Use trained parameters to predict labels
+# 
+# Let's now implement those two models!
+
+# ## 4 - Two-layer neural network
+# 
+# **Question**:  Use the helper functions you have implemented in the previous assignment to build a 2-layer neural network with the following structure: *LINEAR -> RELU -> LINEAR -> SIGMOID*. The functions you may need and their inputs are:
+# ```python
+# def initialize_parameters(n_x, n_h, n_y):
+#     ...
+#     return parameters 
+# def linear_activation_forward(A_prev, W, b, activation):
+#     ...
+#     return A, cache
+# def compute_cost(AL, Y):
+#     ...
+#     return cost
+# def linear_activation_backward(dA, cache, activation):
+#     ...
+#     return dA_prev, dW, db
+# def update_parameters(parameters, grads, learning_rate):
+#     ...
+#     return parameters
+# ```
+
+# In[9]:
+
+### CONSTANTS DEFINING THE MODEL ####
+n_x = 12288     # num_px * num_px * 3
+n_h = 7
+n_y = 1
+layers_dims = (n_x, n_h, n_y)
