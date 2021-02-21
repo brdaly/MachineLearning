@@ -25,22 +25,28 @@ def main(is_semi_supervised, trial_num):
 
     # (1) Initialize mu and sigma by splitting the n_examples data points uniformly at random
     # into K groups, then calculating the sample mean and covariance for each group
+    n_examples, dim = x.shape
+    group = np.random.choice(K, n_examples)
+    mu = [np.mean(x[group == g, :], axis = 0) for g in range(K)]
+    sigma = [np.cov(x[group == g, :].T) for g in range(K)]
+
     # (2) Initialize phi to place equal probability on each Gaussian
     # phi should be a numpy array of shape (K,)
+    phi = np.full((K,), fill_value=(1. / K), dtype=np.float32)
+
     # (3) Initialize the w values to place equal probability on each Gaussian
-    # w should be a numpy array of shape (m, K)
-    # *** START CODE HERE ***
-    # *** END CODE HERE ***
+    # w should be a numpy array of shape (n, K)
+    w = np.full((n_examples, K), fill_value=(1. / K), dtype=np.float32)
 
     if is_semi_supervised:
-        w = run_semi_supervised_em(x, x_tilde, z_tilde, w, phi, mu, sigma)
+        w = run_semi_supervised_em(x, x_tilde, z_tilde, w,  phi, mu, sigma)
     else:
         w = run_em(x, w, phi, mu, sigma)
 
     # Plot your predictions
-    z_pred = np.zeros(n)
+    z_pred = np.zeros(n_examples)
     if w is not None:  # Just a placeholder for the starter code
-        for i in range(n):
+        for i in range(n_examples):
             z_pred[i] = np.argmax(w[i])
 
     plot_gmm_preds(x, z_pred, is_semi_supervised, plot_id=trial_num)
@@ -68,7 +74,8 @@ def run_em(x, w, phi, mu, sigma, max_iter=1000):
     it = 0
     ll = prev_ll = None
     while it < max_iter and (prev_ll is None or np.abs(ll - prev_ll) >= eps):
-        pass  # Just a placeholder for the starter code
+        pass
+        # Just a placeholder for the starter code
         # (1) E-step: Update your estimates in w
         # (2) M-step: Update the model parameters phi, mu, and sigma
         # (3) Compute the log-likelihood of the data to check for convergence.
@@ -76,6 +83,73 @@ def run_em(x, w, phi, mu, sigma, max_iter=1000):
         # We define convergence by the first iteration where abs(ll - prev_ll) < eps.
         # Hint: For debugging, recall part (a). We showed that ll should be monotonically increasing.
         # *** START CODE HERE
+
+        # (1) E-step:
+        n_examples, dim = x.shape
+        k = len(mu)
+        for i in range(n_examples):
+            for j in range(k)
+                w[i, j] = p_x_given_z(x[i], mu[j], sigma[j]) * phi[j]
+            w/= np.sum(w, axis=1, keepdims=True)
+        return w
+
+
+        # (2) M-step:
+        n_examples, dim = x.shape
+        k = len(mu)
+
+        phi = np.mean(w, axis=0)
+
+        for j in range(k):
+            w_j = w[:, j:j +1]
+            mu[j] = np.sum(w_j * x, axis=0) / np.sum(w_j)
+
+            sigma[j] = np.zeros_like(sigma[j])
+            for i in range(n_examples):
+                x_min_mu = x[i] - mu[j]
+
+
+
+        N, D = data.shape
+        K = gamma.shape[1]
+        pi = np.zeros(K)
+        mu = np.zeros((K, D))
+        sigma = np.zeros((K, D, D))
+        for ik in range(K):
+            n_k = gamma[:, ik].sum()
+            pi[ik] = n_k/N #definition of weights
+            elements = np.reshape(gamma[:, ik], (gamma.shape[0], 1))
+            #get each column and reshape (K,1) to allow for broadcasting later
+            mu[ik,:] = np.multiply(elements, x)).sum(axis=0) / n_k
+            sigma_sum = 0
+            for i in range(N)
+                var = data[i] - mu[ik]
+                sigma_sum = sigma_sum + gamma[i, ik] * np.outer(var, var) #outer product creates covariance matrix
+            sigma[ik,:] = sigma_sum/n_k
+        return pi, mu, sigma
+
+        # (3) Log-likelihood: ll = sum_x[log(sum_z[p(x|z) * p(z)])]`.
+        N = data.shape[0]
+        K = gamma.shape[1]
+        d=data.shape[1]
+        loss = 0
+        for i in range(N):
+            x = data[i]
+            for k in range(K):
+                pos_dist = gamma[i, k]
+                log_lik = np.log(sigma)
+                log_q = np.log(gamma[i,k])
+                log_pz = np.log(pi[k])
+                loss = (loss + np.multiply(pos_dist, log_pz) + np.multiply(pos_dist, log_lik) + np.multiply(pos_dist, -log_q))
+
+            #print("Check loss: ", loss)
+        return loss
+
+        # We define convergence by the first iteration where abs(ll - prev_ll) < eps.
+        # Hint: For debugging, recall part (a). We showed that ll should be monotonically increasing.
+
+
+
         # *** END CODE HERE ***
 
     return w
@@ -114,11 +188,47 @@ def run_semi_supervised_em(x, x_tilde, z_tilde, w, phi, mu, sigma, max_iter=1000
         # Hint: For debugging, recall part (a). We showed that ll should be monotonically increasing.
         # *** START CODE HERE ***
         # *** END CODE HERE ***
-
     return w
 
-
 # *** START CODE HERE ***
+
+    # (1) E-step:
+    x = data.shape[0]
+    mu = phi.shape[0]
+    d = mu.shape[1]
+    gamma = np.zeros((x, mu))
+    for nk in range(mu):
+        gamma[:, nk] = phi[nk] * sigma
+    # Calculate responsibility of each cluster
+    w = gamma / np.sum(gamma, axis=1, keepdims=True)
+    return w
+
+    # (2) M-step:
+    #N, D = data.shape
+    K = gamma.shape[1]
+    pi = np.zeros(K)
+    mu = np.zeros((K, D))
+    sigma = np.zeros((K, D, D))
+    for ik in range(K):
+        n_k = gamma[:, ik].sum()
+        pi[ik] = n_k / N  # definition of weights
+        elements = np.reshape(gamma[:, ik], (gamma.shape[0], 1))
+        # get each column and reshape (K,1) to allow for broadcasting later
+        mu[ik, :] = np.multiply(elements, x)).sum(axis=0) / n_k
+        sigma_sum = 0
+        for i in range(N)
+        var = data[i] - mu[ik]
+        sigma_sum = sigma_sum + gamma[i, ik] * np.outer(var, var)  # outer product creates covariance matrix
+        sigma[ik,:] = sigma_sum / n_k
+    return pi, mu, sigma
+
+    # *** END CODE HERE ***
+
+    if is_semi_supervised:
+        w = run_semi_supervised_em(x, x_tilde, z_tilde, w, phi, mu, sigma)
+    else:
+        w = run_em(x, w, phi, mu, sigma)
+
 # *** END CODE HERE ***
 
 
