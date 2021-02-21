@@ -7,7 +7,6 @@ K = 4           # Number of Gaussians in the mixture model
 NUM_TRIALS = 3  # Number of trials to run (can be adjusted for debugging)
 UNLABELED = -1  # Cluster label for unlabeled data points (do not change)
 
-
 def main(is_semi_supervised, trial_num):
     """Problem 2: EM for Gaussian Mixture Models (unsupervised and semi-supervised)"""
     print('Running {} EM algorithm...'
@@ -45,7 +44,7 @@ def main(is_semi_supervised, trial_num):
 
     # Plot your predictions
     z_pred = np.zeros(n_examples)
-    if w is not None:  # Just a placeholder for the starter code
+    if w is not None:
         for i in range(n_examples):
             z_pred[i] = np.argmax(w[i])
 
@@ -82,77 +81,22 @@ def run_em(x, w, phi, mu, sigma, max_iter=1000):
         # By log-likelihood, we mean `ll = sum_x[log(sum_z[p(x|z) * p(z)])]`.
         # We define convergence by the first iteration where abs(ll - prev_ll) < eps.
         # Hint: For debugging, recall part (a). We showed that ll should be monotonically increasing.
+
         # *** START CODE HERE
-
         # (1) E-step:
-        n_examples, dim = x.shape
-        k = len(mu)
-        for i in range(n_examples):
-            for j in range(k)
-                w[i, j] = p_x_given_z(x[i], mu[j], sigma[j]) * phi[j]
-            w/= np.sum(w, axis=1, keepdims=True)
-        return w
+        w = e_step(x, w, phi, mu, sigma)
 
-
-        # (2) M-step:
-        n_examples, dim = x.shape
-        k = len(mu)
-
-        phi = np.mean(w, axis=0)
-
-        for j in range(k):
-            w_j = w[:, j:j +1]
-            mu[j] = np.sum(w_j * x, axis=0) / np.sum(w_j)
-
-            sigma[j] = np.zeros_like(sigma[j])
-            for i in range(n_examples):
-                x_min_mu = x[i] - mu[j]
-
-
-
-        N, D = data.shape
-        K = gamma.shape[1]
-        pi = np.zeros(K)
-        mu = np.zeros((K, D))
-        sigma = np.zeros((K, D, D))
-        for ik in range(K):
-            n_k = gamma[:, ik].sum()
-            pi[ik] = n_k/N #definition of weights
-            elements = np.reshape(gamma[:, ik], (gamma.shape[0], 1))
-            #get each column and reshape (K,1) to allow for broadcasting later
-            mu[ik,:] = np.multiply(elements, x)).sum(axis=0) / n_k
-            sigma_sum = 0
-            for i in range(N)
-                var = data[i] - mu[ik]
-                sigma_sum = sigma_sum + gamma[i, ik] * np.outer(var, var) #outer product creates covariance matrix
-            sigma[ik,:] = sigma_sum/n_k
-        return pi, mu, sigma
+        # (2) M-step for unsupervised:
+        phi, mu, sigma = m_step(x, w, mu, sigma)
 
         # (3) Log-likelihood: ll = sum_x[log(sum_z[p(x|z) * p(z)])]`.
-        N = data.shape[0]
-        K = gamma.shape[1]
-        d=data.shape[1]
-        loss = 0
-        for i in range(N):
-            x = data[i]
-            for k in range(K):
-                pos_dist = gamma[i, k]
-                log_lik = np.log(sigma)
-                log_q = np.log(gamma[i,k])
-                log_pz = np.log(pi[k])
-                loss = (loss + np.multiply(pos_dist, log_pz) + np.multiply(pos_dist, log_lik) + np.multiply(pos_dist, -log_q))
-
-            #print("Check loss: ", loss)
-        return loss
-
+        prev_ll = ll
+        ll = log_likelihood(x, phi, mu, sigma)
+        it += 1
         # We define convergence by the first iteration where abs(ll - prev_ll) < eps.
         # Hint: For debugging, recall part (a). We showed that ll should be monotonically increasing.
 
-
-
-        # *** END CODE HERE ***
-
-    return w
+        return w
 
 
 def run_semi_supervised_em(x, x_tilde, z_tilde, w, phi, mu, sigma, max_iter=1000):
@@ -186,51 +130,99 @@ def run_semi_supervised_em(x, x_tilde, z_tilde, w, phi, mu, sigma, max_iter=1000
         # (3) Compute the log-likelihood of the data to check for convergence.
         # Hint: Make sure to include alpha in your calculation of ll.
         # Hint: For debugging, recall part (a). We showed that ll should be monotonically increasing.
+
         # *** START CODE HERE ***
-        # *** END CODE HERE ***
+        # (1) E-step (same as before):
+        w = e_step(x, w, phi, mu, sigma)
+
+        # (2) M-step for semi-unsupervised:
+        phi, mu, sigma = m_step_ssup(x, x_tilde, z_tilde, w, phi, mu, sigma)
+
+        # (3) Log-likelihood: ll = sum_x[log(sum_z[p(x|z) * p(z)])]`.
+
+        def log_likelihood(x, phi, mu, sigma, z=None):
+            n_examples, dim = x.shape
+            k = len(phi)
+            ll = 0.
+            for i in range(n_examples):
+                if z is None:
+                    p_x = 0.
+                    for j in range(k):
+                        p_x += p_x_given_z(x[i], mu[j], sigma[j]) * phi[j]
+                else:
+                    j = int(z[i])
+                    p_x = p_x_given_z(x[i], mu[j], sigma[j]) * phi[j]
+                ll += np.log(p_x)
+            return ll
+
+        prev_ll = ll
+        ll = log_likelihood(x,phi, mu, sigma)
+        ll += alpha * log_likelihood(x_tilde, phi, mu, sigma, z_tilde)
+        it +=1
+
+
     return w
 
-# *** START CODE HERE ***
-
-    # (1) E-step:
-    x = data.shape[0]
-    mu = phi.shape[0]
-    d = mu.shape[1]
-    gamma = np.zeros((x, mu))
-    for nk in range(mu):
-        gamma[:, nk] = phi[nk] * sigma
-    # Calculate responsibility of each cluster
-    w = gamma / np.sum(gamma, axis=1, keepdims=True)
+# Defined Functions
+def e_step(x, w, phi, mu, sigma):
+    """E-step for both cases"""
+    n_examples, dim = x.shape
+    k = len(mu)
+    for i in range(n_examples):
+        for j in range(k):
+            w[i, j] = p_x_given_z(x[i], mu[j], sigma[j]) * phi[j]
+    w /= np.sum(w, axis=1, keepdims=True)
     return w
 
-    # (2) M-step:
-    #N, D = data.shape
-    K = gamma.shape[1]
-    pi = np.zeros(K)
-    mu = np.zeros((K, D))
-    sigma = np.zeros((K, D, D))
-    for ik in range(K):
-        n_k = gamma[:, ik].sum()
-        pi[ik] = n_k / N  # definition of weights
-        elements = np.reshape(gamma[:, ik], (gamma.shape[0], 1))
-        # get each column and reshape (K,1) to allow for broadcasting later
-        mu[ik, :] = np.multiply(elements, x)).sum(axis=0) / n_k
-        sigma_sum = 0
-        for i in range(N)
-        var = data[i] - mu[ik]
-        sigma_sum = sigma_sum + gamma[i, ik] * np.outer(var, var)  # outer product creates covariance matrix
-        sigma[ik,:] = sigma_sum / n_k
-    return pi, mu, sigma
+def p_x_given_z(x, mu, sigma):
+    n = len(x)
+    assert n == len(mu) and sigma.shape == (n, n), 'Shape mismatch.'
+    c = 1. / ((2. * np.pi) ** (n / 2) * np.sqrt(np.linalg.det(sigma)))
+    x_minus_mu = x - mu
+    sigma_inv = np.linalg.inv(sigma)
+    p_val = c * np.exp(-.5 * x_minus_mu.dot(sigma_inv).dot(x_minus_mu.T))
+    return p_val
 
-    # *** END CODE HERE ***
+def m_step(x, w, mu, sigma):
+    n_examples, dim = x.shape
+    k = len(mu)
+    phi = np.mean(w, axis=0)
 
-    if is_semi_supervised:
-        w = run_semi_supervised_em(x, x_tilde, z_tilde, w, phi, mu, sigma)
-    else:
-        w = run_em(x, w, phi, mu, sigma)
+    for j in range(k):
+        w_j = w[:, j:j + 1]
+        mu[j] = np.sum(w_j * x, axis=0) / np.sum(w_j)
 
-# *** END CODE HERE ***
+        sigma[j] = np.zeros_like(sigma[j])
+        for i in range(n_examples):
+            x_minus_mu = x[i] - mu[j]
+            sigma[j] += w[i, j] * np.outer(x_minus_mu, x_minus_mu)
+        sigma[j] /= np.sum(w_j)
 
+    return phi, mu, sigma
+
+def m_step_ssup(x, x_tilde, z_tilde, w, phi, mu, sigma):
+    n_examples, _ = x.shape
+    n_tilde, _ = x_tilde.shape
+    k = len(mu)
+
+    phi = np.mean(w, axis=0)
+    w_colsums = np.sum(w, axis=0)
+    k_counts = [np.sum(z == j) for j in range (k)]
+    for j in range(k):
+        phi[j] =(w_colsums[j] + k_counts[j]) / (n_examples + n_tilde)
+
+        w_j = w[:, j:j + 1]
+        mu[j] = ((np.sum((w_j * x, axis=0)
+                    + np.sum(x_tilde[(z == j).squeeze(), :], axis=0))
+                    / (np.sum(w_j)+k_counts[j])
+
+        sigma[j] = np.zeros_like(sigma[j])
+        for i in range(n_examples):
+            x_minus_mu = x[i] - mu[j]
+            sigma[j] += w[i, j] * np.outer(x_minus_mu, x_minus_mu)
+        sigma[j] /= np.sum(w_j) + k_counts[j])
+
+    return phi, mu, sigma
 
 def plot_gmm_preds(x, z, with_supervision, plot_id):
     """Plot GMM predictions on a 2D dataset `x` with labels `z`.
@@ -259,7 +251,7 @@ def load_gmm_dataset(csv_path):
          csv_path: Path to CSV file containing dataset.
     Returns:
         x: NumPy array shape (n_examples, dim)
-        z: NumPy array shape (n_exampls, 1)
+        z: NumPy array shape (n_examples, 1)
     NOTE: You do not need to edit this function.
     """
 
@@ -279,7 +271,6 @@ def load_gmm_dataset(csv_path):
 
     return x, z
 
-
 if __name__ == '__main__':
     np.random.seed(229)
     # Run NUM_TRIALS trials to see how different initializations
@@ -287,3 +278,4 @@ if __name__ == '__main__':
     for t in range(NUM_TRIALS):
         main(is_semi_supervised=False, trial_num=t)
         main(is_semi_supervised=True, trial_num=t)
+
