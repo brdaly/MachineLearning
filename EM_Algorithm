@@ -26,7 +26,7 @@ def main(is_semi_supervised, trial_num):
     # into K groups, then calculating the sample mean and covariance for each group
     n_examples, dim = x.shape
     group = np.random.choice(K, n_examples)
-    mu = [np.mean(x[group == g, :], axis = 0) for g in range(K)]
+    mu = [np.mean(x[group == g, :], axis=0) for g in range(K)]
     sigma = [np.cov(x[group == g, :].T) for g in range(K)]
 
     # (2) Initialize phi to place equal probability on each Gaussian
@@ -74,13 +74,6 @@ def run_em(x, w, phi, mu, sigma, max_iter=1000):
     ll = prev_ll = None
     while it < max_iter and (prev_ll is None or np.abs(ll - prev_ll) >= eps):
         pass
-        # Just a placeholder for the starter code
-        # (1) E-step: Update your estimates in w
-        # (2) M-step: Update the model parameters phi, mu, and sigma
-        # (3) Compute the log-likelihood of the data to check for convergence.
-        # By log-likelihood, we mean `ll = sum_x[log(sum_z[p(x|z) * p(z)])]`.
-        # We define convergence by the first iteration where abs(ll - prev_ll) < eps.
-        # Hint: For debugging, recall part (a). We showed that ll should be monotonically increasing.
 
         # *** START CODE HERE
         # (1) E-step:
@@ -93,10 +86,12 @@ def run_em(x, w, phi, mu, sigma, max_iter=1000):
         prev_ll = ll
         ll = log_likelihood(x, phi, mu, sigma)
         it += 1
+        print('[iteration: {:03d}, log-likelihood: {:.4f}]'.format(it, ll))
+
         # We define convergence by the first iteration where abs(ll - prev_ll) < eps.
         # Hint: For debugging, recall part (a). We showed that ll should be monotonically increasing.
 
-        return w
+    return w
 
 
 def run_semi_supervised_em(x, x_tilde, z_tilde, w, phi, mu, sigma, max_iter=1000):
@@ -124,10 +119,8 @@ def run_semi_supervised_em(x, x_tilde, z_tilde, w, phi, mu, sigma, max_iter=1000
     it = 0
     ll = prev_ll = None
     while it < max_iter and (prev_ll is None or np.abs(ll - prev_ll) >= eps):
-        pass  # Just a placeholder for the starter code
-        # (1) E-step: Update your estimates in w
-        # (2) M-step: Update the model parameters phi, mu, and sigma
-        # (3) Compute the log-likelihood of the data to check for convergence.
+        pass
+
         # Hint: Make sure to include alpha in your calculation of ll.
         # Hint: For debugging, recall part (a). We showed that ll should be monotonically increasing.
 
@@ -136,52 +129,31 @@ def run_semi_supervised_em(x, x_tilde, z_tilde, w, phi, mu, sigma, max_iter=1000
         w = e_step(x, w, phi, mu, sigma)
 
         # (2) M-step for semi-unsupervised:
-        phi, mu, sigma = m_step_ssup(x, x_tilde, z_tilde, w, phi, mu, sigma)
+        phi, mu, sigma = m_step_ss(x, x_tilde, z_tilde, w, phi, mu, sigma)
 
         # (3) Log-likelihood: ll = sum_x[log(sum_z[p(x|z) * p(z)])]`.
-
-        def log_likelihood(x, phi, mu, sigma, z=None):
-            n_examples, dim = x.shape
-            k = len(phi)
-            ll = 0.
-            for i in range(n_examples):
-                if z is None:
-                    p_x = 0.
-                    for j in range(k):
-                        p_x += p_x_given_z(x[i], mu[j], sigma[j]) * phi[j]
-                else:
-                    j = int(z[i])
-                    p_x = p_x_given_z(x[i], mu[j], sigma[j]) * phi[j]
-                ll += np.log(p_x)
-            return ll
-
         prev_ll = ll
         ll = log_likelihood(x,phi, mu, sigma)
         ll += alpha * log_likelihood(x_tilde, phi, mu, sigma, z_tilde)
         it +=1
-
+        print('[iteration: {:03d}, log-likelihood: {:.4f}]'.format(it, ll))
 
     return w
 
-# Defined Functions
+# Helper Functions
+
 def e_step(x, w, phi, mu, sigma):
     """E-step for both cases"""
     n_examples, dim = x.shape
     k = len(mu)
+
     for i in range(n_examples):
         for j in range(k):
             w[i, j] = p_x_given_z(x[i], mu[j], sigma[j]) * phi[j]
-    w /= np.sum(w, axis=1, keepdims=True)
-    return w
 
-def p_x_given_z(x, mu, sigma):
-    n = len(x)
-    assert n == len(mu) and sigma.shape == (n, n), 'Shape mismatch.'
-    c = 1. / ((2. * np.pi) ** (n / 2) * np.sqrt(np.linalg.det(sigma)))
-    x_minus_mu = x - mu
-    sigma_inv = np.linalg.inv(sigma)
-    p_val = c * np.exp(-.5 * x_minus_mu.dot(sigma_inv).dot(x_minus_mu.T))
-    return p_val
+    w /= np.sum(w, axis=1, keepdims=True)
+
+    return w
 
 def m_step(x, w, mu, sigma):
     n_examples, dim = x.shape
@@ -200,29 +172,58 @@ def m_step(x, w, mu, sigma):
 
     return phi, mu, sigma
 
-def m_step_ssup(x, x_tilde, z_tilde, w, phi, mu, sigma):
-    n_examples, _ = x.shape
+def m_step_ss(x, x_tilde, z, w, phi, mu, sigma):
+    n_examples_obs, _ = x.shape
     n_tilde, _ = x_tilde.shape
+    alpha = 20.  # Weight for the labeled examples
     k = len(mu)
 
-    phi = np.mean(w, axis=0)
     w_colsums = np.sum(w, axis=0)
     k_counts = [np.sum(z == j) for j in range (k)]
+
     for j in range(k):
-        phi[j] =(w_colsums[j] + k_counts[j]) / (n_examples + n_tilde)
+        phi[j] = (w_colsums[j] + alpha * k_counts[j]) / (n_examples_obs + alpha * n_tilde)
 
         w_j = w[:, j:j + 1]
-        mu[j] = ((np.sum((w_j * x, axis=0)
-                    + np.sum(x_tilde[(z == j).squeeze(), :], axis=0))
-                    / (np.sum(w_j)+k_counts[j])
+        mu[j] = ((np.sum((w_j * x, axis=0) + alpha * np.sum(x_tilde[(z == j).squeeze(), :], axis=0)) / (np.sum(w_j)+ alpha * k_counts[j])
 
         sigma[j] = np.zeros_like(sigma[j])
-        for i in range(n_examples):
+        for i in range(n_examples_obs):
             x_minus_mu = x[i] - mu[j]
             sigma[j] += w[i, j] * np.outer(x_minus_mu, x_minus_mu)
-        sigma[j] /= np.sum(w_j) + k_counts[j])
+        for i in range(n_tilde):
+            if z[i] == j:
+                x_minus_mu = x_tilde[i] - mu[j]
+                sigma[j] += alpha * np.outer(x_minus_mu, x_minus_mu)
+        sigma[j] /= np.sum(w_j) + alpha * k_counts[j])
 
     return phi, mu, sigma
+
+def log_likelihood(x, phi, mu, sigma, z=None):
+    n_examples, dim = x.shape
+    k = len(phi)
+    ll = 0.
+    for i in range(n_examples):
+        if z is None:
+            p_x = 0.
+            for j in range(k):
+                p_x += p_x_given_z(x[i], mu[j], sigma[j]) * phi[j]
+        else:
+            j = int(z[i])
+            p_x = p_x_given_z(x[i], mu[j], sigma[j]) * phi[j]
+        ll += np.log(p_x)
+
+    return ll
+
+def p_x_given_z(x, mu, sigma):
+    dim = len(x)
+    assert dim == len(mu) and sigma.shape == (dim, dim), 'Shape mismatch.'
+    c = 1. / ((2. * np.pi) ** (dim / 2) * np.sqrt(np.linalg.det(sigma)))
+    x_minus_mu = x - mu
+    sigma_inv = np.linalg.inv(sigma)
+    p_val = c * np.exp(-.5 * x_minus_mu.dot(sigma_inv).dot(x_minus_mu.T))
+    return p_val
+
 
 def plot_gmm_preds(x, z, with_supervision, plot_id):
     """Plot GMM predictions on a 2D dataset `x` with labels `z`.
